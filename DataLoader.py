@@ -1,6 +1,3 @@
-
-
-
 from pathlib import Path
 import mne
 import os
