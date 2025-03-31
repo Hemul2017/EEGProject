@@ -100,7 +100,7 @@ class Net(nn.Module):
         output = self.elu(output)
         output = torch.transpose(output, 1, 2)
         output, hidden = self.lstm(output)
-        #output, hidden = self.lstm(output)
+        output, hidden = self.lstm(output)
         # RNN output shape is (seq_len, batch, input_size)
         # Get last output of RNN
         output = output[:, -1, :]
@@ -199,7 +199,7 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-    epochs_dataset = EpochsDataset('./epochs_tensors')
+    epochs_dataset = EpochsDataset('./epochs_tensors/imaginary')
     train_dataset, test_dataset = torch.utils.data.random_split(epochs_dataset, [0.8, 0.2])
 
     train_loader = torch.utils.data.DataLoader(

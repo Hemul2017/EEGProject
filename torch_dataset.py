@@ -11,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 import warnings
 
+
 class EpochsDataset(Dataset):
 
     def __init__(self, data_dir: Path | str):
@@ -37,13 +38,14 @@ def collate_fn(batch):
     return inputs, targets
 
 if __name__ == '__main__':
-    dataset = EpochsDataset('./epochs_tensors')
-    X, y = dataset[1525]
+    imaginary_dataset = EpochsDataset('./epochs_tensors/imaginary')
+    X, y = imaginary_dataset[17]
+    print(len(imaginary_dataset))
     print(X.shape)
-    train_data, test_data = random_split(dataset, [0.8, 0.2])
+    train_data, test_data = random_split(imaginary_dataset, [0.8, 0.2])
     print(len(train_data.indices))
     print(len(test_data.indices))
-    print(len(dataset))
+    print(len(imaginary_dataset))
     print(y)
 
 
