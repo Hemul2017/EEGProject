@@ -38,7 +38,7 @@ def collate_fn(batch):
     return inputs, targets
 
 if __name__ == '__main__':
-    imaginary_dataset = EpochsDataset('./epochs_tensors/imaginary')
+    imaginary_dataset = EpochsDataset('./epochs_tensors_w_connectivity/imaginary')
     X, y = imaginary_dataset[17]
     print(len(imaginary_dataset))
     print(X.shape)

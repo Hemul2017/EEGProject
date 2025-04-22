@@ -3,8 +3,10 @@
 
 from typing import Iterator
 import mne
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import mne_connectivity
 from DataLoader import EEGDataLoader
 from pathlib import Path
 import time
@@ -18,12 +20,13 @@ class EEGDataSaver:
         self.first_type_runs = {'03', '04', '07', '08', '11', '12'}
         self.encode_dict = {'rest': 0, 'left_hand': 1, 'right_hand': 2, 'both_hands': 3, 'feet': 4}
 
-    def save_to_2d_dataframe_by_epochs(self, save_path: Path | str, distinguish_imagined: bool = True) -> None:
+    def save_to_2d_dataframe_by_epochs(self, save_path: Path | str, **kwargs) -> None:
 
         if isinstance(save_path, str):
             save_path = Path(save_path)
 
-        data_loader = EEGDataLoader(self.load_path, self.pattern)
+        print(kwargs)
+        data_loader = EEGDataLoader(self.load_path, self.pattern, **kwargs)
 
         labels = []
 
@@ -32,12 +35,7 @@ class EEGDataSaver:
             # Пропуск базовых сессий
             if (n_run == '01') or (n_run == '02'):
                 continue
-            # Разделение данных на представляемые и реальные движения
-            if distinguish_imagined:
-                if int(n_run) % 2 == 0:
-                    save_path = save_path / 'imaginary'
-                else:
-                    save_path = save_path / 'real'
+
 
             epoch_labels = []
             for epoch_idx, (evoked, epoch_label) in enumerate(zip(epochs.iter_evoked(), epochs.get_annotations_per_epoch())):
@@ -58,60 +56,13 @@ class EEGDataSaver:
         labels_df.to_csv(save_path / 'labels.csv')
 
 
-    def save_to_2d_tensors_by_epochs(self, base_save_path: Path | str) -> None:
-
-        if isinstance(base_save_path, str):
-            base_save_path = Path(base_save_path)
-
-        data_loader = EEGDataLoader(self.load_path, self.pattern)
-
-        labels_imaginary = []
-        labels_real = []
-        n_samples_expected = 657
-
-        for file_idx, (epochs, file_name) in enumerate(data_loader):
-            save_path = base_save_path
-            n_run = file_name.split('.')[0][-2:]
-            # Пропуск базовых сессий
-            if (n_run == '01') or (n_run == '02'):
-                continue
-            # Разделение данных на представляемые и реальные движения
-            if int(n_run) % 2 == 0:
-                save_path = save_path / 'imaginary'
-                labels = labels_imaginary
-            else:
-                save_path = save_path / 'real'
-                labels = labels_real
-
-            epoch_labels = []
-            for epoch_idx, (evoked, epoch_label) in enumerate(zip(epochs.iter_evoked(), epochs.get_annotations_per_epoch())):
-                data = evoked.get_data()
-                if data.shape[1] != n_samples_expected:
-                    print(f'Record {file_idx:04}_{epoch_idx:02} has {data.shape[1]} samples, while {n_samples_expected} samples expected')
-                    continue
-                data_tensor = torch.tensor(data, dtype=torch.float32)
-                save_path.mkdir(parents=True, exist_ok=True)
-                torch.save(data_tensor, save_path / f'{file_idx:04}_{n_run}_{epoch_idx:02}.pt')
-                epoch_label = self._encode_labels(epoch_label[0][2], n_run)
-                epoch_labels.append(epoch_label)
-
-            labels.extend(epoch_labels)
-            print(f'\nFile {file_name} has successfully been processed\n')
-
-        imaginary_labels_tensor = torch.tensor(labels_imaginary)
-        torch.save(imaginary_labels_tensor, base_save_path / 'imaginary' / 'labels.pt')
-        real_labels_tensor = torch.tensor(labels_real)
-        torch.save(real_labels_tensor, base_save_path / 'real' / 'labels.pt')
-
-        print(f'\nAll files have successfully been processed\n')
-
     # Тензоры с разделением на воображаемое и реальное движение
-    def save_to_2d_tensors_by_epochs(self, base_save_path: Path | str) -> None:
+    def save_to_2d_tensors_by_epochs(self, base_save_path: Path | str, **kwargs) -> None:
 
         if isinstance(base_save_path, str):
             base_save_path = Path(base_save_path)
 
-        data_loader = EEGDataLoader(self.load_path, self.pattern)
+        data_loader = EEGDataLoader(self.load_path, self.pattern, **kwargs)
 
         labels_imaginary = []
         labels_real = []
@@ -154,12 +105,12 @@ class EEGDataSaver:
         print(f'\nAll files have successfully been processed\n')
 
     # Тензоры без разделения на воображаемое и реальное движение
-    def save_to_2d_tensors_by_epochs_wo_division(self, save_path: Path | str) -> None:
+    def save_to_2d_tensors_by_epochs_wo_division(self, save_path: Path | str, **kwargs) -> None:
 
         if isinstance(save_path, str):
             save_path = Path(save_path)
 
-        data_loader = EEGDataLoader(self.load_path, self.pattern)
+        data_loader = EEGDataLoader(self.load_path, self.pattern, **kwargs)
 
         labels = []
         n_samples_expected = 657
@@ -188,6 +139,56 @@ class EEGDataSaver:
 
         print(f'All files has successfully been processed')
 
+    def save_to_2d_tensors_by_epochs_w_connectivity(self, base_save_path: Path | str, **kwargs) -> None:
+
+        if isinstance(base_save_path, str):
+            base_save_path = Path(base_save_path)
+
+        data_loader = EEGDataLoader(self.load_path, self.pattern, **kwargs)
+
+        labels_imaginary = []
+        labels_real = []
+        n_samples_expected = 657
+
+        for file_idx, (epochs, file_name) in enumerate(data_loader):
+            save_path = base_save_path
+            n_run = file_name.split('.')[0][-2:]
+            # Пропуск базовых сессий
+            if (n_run == '01') or (n_run == '02'):
+                continue
+            # Разделение данных на представляемые и реальные движения
+            if int(n_run) % 2 == 0:
+                save_path = save_path / 'imaginary'
+                labels = labels_imaginary
+            else:
+                save_path = save_path / 'real'
+                labels = labels_real
+
+            epoch_labels = []
+            for epoch_idx, (evoked, epoch_label) in enumerate(zip(epochs.iter_evoked(), epochs.get_annotations_per_epoch())):
+                data = evoked.get_data()
+                data = data[np.newaxis, :, :]
+                data = mne_connectivity.spectral_connectivity_time(data, freqs=[10, 22.5, 45, 60], sfreq=160, method='pli')
+                data = data.get_data().reshape(4096, 4).T
+                if data.shape[1] != 4096:
+                    print(f'Record {file_idx:04}_{epoch_idx:02} has {data.shape[1]} samples, while {n_samples_expected} samples expected')
+                    continue
+                data_tensor = torch.tensor(data, dtype=torch.float32)
+                save_path.mkdir(parents=True, exist_ok=True)
+                torch.save(data_tensor, save_path / f'{file_idx:04}_{n_run}_{epoch_idx:02}.pt')
+                epoch_label = self._encode_labels(epoch_label[0][2], n_run)
+                epoch_labels.append(epoch_label)
+
+            labels.extend(epoch_labels)
+            print(f'\nFile {file_name} has successfully been processed\n')
+
+        imaginary_labels_tensor = torch.tensor(labels_imaginary)
+        torch.save(imaginary_labels_tensor, base_save_path / 'imaginary' / 'labels.pt')
+        real_labels_tensor = torch.tensor(labels_real)
+        torch.save(real_labels_tensor, base_save_path / 'real' / 'labels.pt')
+
+        print(f'\nAll files have successfully been processed\n')
+
 
     def _encode_labels(self, annotation_label: str, n_run: str) -> int:
 
@@ -210,9 +211,9 @@ class EEGDataSaver:
 
 
 if __name__ == '__main__':
-    #data_saver = EEGDataSaver(load_path='./files', pattern=r'\w\d{3}')
-    #data_saver.save_to_2d_tensors_by_epochs('./epochs_tensors')
     data_saver = EEGDataSaver(load_path='./files', pattern=r'\w\d{3}')
-    data_saver.save_to_2d_tensors_by_epochs_wo_division('./epochs_tensors_wo_division')
+    #data_saver.save_to_2d_tensors_by_epochs('./epochs_tensors', baseline=None, tmin=0, tmax=4.1)
+    #data_saver.save_to_2d_tensors_by_epochs_wo_division('./epochs_tensors_wo_division', baseline=None, tmin=0, tmax=4.1)
+    data_saver.save_to_2d_tensors_by_epochs_w_connectivity('./epochs_tensors_w_connectivity', baseline=None, tmin=0, tmax=4.1)
 
 
