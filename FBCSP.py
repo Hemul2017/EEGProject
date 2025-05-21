@@ -26,7 +26,7 @@ class FBCSP:
 
         return self
 
-    def transform(self, data: np.array) -> np.array:
+    def transform(self, data: np.array, reshape=True) -> np.array:
         if not self.fitted_csps:
             raise RuntimeError('FBCSP has not been fitted. Call .fit() method before using .transform()')
         freq_rngs = self.fitted_csps.keys()
@@ -36,6 +36,9 @@ class FBCSP:
         for i, freq_rng in enumerate(freq_rngs):
             csp: CSP = self.fitted_csps[freq_rng]
             transformed_data[i] = csp.transform(filtered_data[i])
+
+        if reshape:
+            transformed_data = np.swapaxes(transformed_data, 0, 1).reshape(2, -1, 657)  # Change shape for classification convenience
 
         return transformed_data
 
@@ -71,11 +74,12 @@ if __name__ == '__main__':
     pattern = r'\d{4}_\d{2}_\d{2}.pt'
     X, y = data_loader.load(pattern=pattern)
     X = X.astype(np.float64)
-    fbcsp = FBCSP()
+    fbcsp = FBCSP(n_csp_components=4)
     X_train, y_train = X[:3], y[:3]
     X_test, y_test = X[3:5], y[3:5]
     print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
-    fbcsp.fit(X_train, y_train,[(1, 4), (4, 8), (8, 30), (70, 79)])
-    X_transformed = fbcsp.transform(X_train)
+    fbcsp.fit(X_train, y_train,[(4, 8), (8, 12), (12, 30)])
+    X_transformed = fbcsp.transform(X_test, reshape=True)
     print(X_transformed.shape)
+
 
