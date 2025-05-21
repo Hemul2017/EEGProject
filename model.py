@@ -8,12 +8,13 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-base_path = Path('./epochs_tensors_w_connectivity/imaginary')
+base_path = Path('./epochs_tensors_w_connectivity/real')
 data = []
 for filename in os.listdir(base_path)[:-1]:
     tensor = torch.load(base_path / filename)
     data.append(tensor.flatten()[::10])
     #data.append(np.abs(np.fft.rfft(tensor.flatten()[::10])))
+    print(filename)
 
 
 X = np.array(data)

@@ -22,6 +22,6 @@ def BCICIVLoader(load_path: Path | str, pattern: str):
 
 
 if __name__ == '__main__':
-    mne.io._read
+    print(mne.io.read_raw_gdf('./BCICIV_data/B0301T.gdf'))
     with open('./BCICIV_data/B0101T.gdf', mode='rb') as file:
         print(file.read(80).decode("latin-1").rstrip())
