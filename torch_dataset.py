@@ -19,10 +19,11 @@ class EpochsDataset(Dataset):
             data_dir = Path(data_dir)
         self.data_dir = data_dir
         self.sample_file_names = os.listdir(self.data_dir)
+        self.sample_file_names.remove('labels.pt')
         self.labels = torch.load(self.data_dir / 'labels.pt', weights_only=True)
 
     def __len__(self):
-        return len(self.sample_file_names) - 1
+        return len(self.sample_file_names)
 
     def __getitem__(self, idx):
         file_name = self.sample_file_names[idx]
@@ -30,6 +31,8 @@ class EpochsDataset(Dataset):
         y = self.labels[idx]
 
         return X, y
+
+
 
 def collate_fn(batch):
     inputs = torch.stack([sample[0] for sample in batch], dim=0)

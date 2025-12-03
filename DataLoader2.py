@@ -5,6 +5,7 @@ import re
 import numpy as np
 import torch
 import scipy
+from time import sleep
 
 class DataLoader2:
 
@@ -20,19 +21,21 @@ class DataLoader2:
 
     def load(self, pattern: str):
         tensor_list = []
-        i = 0
-        for file_name in os.listdir(self.data_path):
+        file_list = os.listdir(self.data_path)
+        for i, file_name in enumerate(file_list):
             if re.match(pattern, file_name):
                 data = torch.load(self.data_path / file_name, weights_only=True)
                 tensor_list.append(data)
-                i += 1
-                if i == 5:
-                    break
+            if i % 10 == 0:
+                print(f'\r{i/len(file_list) * 100:.2f}% of files loaded', end='', flush=True)
+
+        print('\r100% of files loaded\n', flush=True)
 
         data = torch.stack(tensor_list)
         data = data.numpy()
         labels = self.labels
         labels = labels.numpy()
+        print(f'Sample of shape {data.shape} and labels {labels.shape} of shape have successfully been load\n')
 
         return data, labels
 
